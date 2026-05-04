@@ -1,15 +1,15 @@
-from django.shortcuts import render
-
-# Create your views here.
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from .serializers import SignupSerializer
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
+from .forms import SignupForm
 
 @api_view(['POST'])
-def signup(request):
+def signup_api(request):
     serializer = SignupSerializer(data=request.data)
 
     if serializer.is_valid():
@@ -19,7 +19,7 @@ def signup(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
-def login(request):
+def login_api(request):
     username = request.data.get('username')
     password = request.data.get('password')
     user = authenticate(username=username, password=password)
@@ -27,3 +27,17 @@ def login(request):
         token, created = Token.objects.get_or_create(user=user)
         return Response({'token': token.key}, status=status.HTTP_200_OK)
     return Response({'error': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
+
+def signup(request):
+    if request.method == 'POST':
+        form = SignupForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('login')
+    else:
+        form = SignupForm()
+    return render(request, 'users/signup.html', {'form': form})
+
+@login_required
+def dashboard(request):
+    return render(request, 'users/dashboard.html', {'message': 'Welcome, admin!'})
